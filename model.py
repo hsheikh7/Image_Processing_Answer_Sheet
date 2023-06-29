@@ -5,6 +5,8 @@ import pandas as pd
 from functions import generate_key, detect_answers, find_the_answer_datasheet, find_the_question, evaluation, presentation
 from functions import add_answers_to_datasheet, detect_questions_in_datasheet, presentation, add_checked_to_datasheet
 import os
+import glob
+
 
 class ClassScore:
     def __init__(self, answer_sheet_path, answer_key_path):
@@ -91,18 +93,25 @@ class ClassScore:
     @staticmethod
     def save_all(answer_sheets_folder, key_path, output_file):
         # Read all answer sheets and keys, calculate scores, and save them in a CSV file
-        
+        df_all = pd.DataFrame() 
 
-        # Calculate the score and return a float value between 0 and 100
-        key_df = generate_key(answer_key_path)
+        for filename in os.listdir(answer_sheets_folder):
+            if filename.endswith('.tif'):
+                file_path = os.path.join(answer_sheets_folder, filename)
+                    
+                key_df = generate_key(key_path)
 
-        answer_sheet_df = detect_answers(answer_sheet_path)
-        answer_sheet_df = add_answers_to_datasheet(answer_sheet_df)
-        answer_sheet_df = detect_questions_in_datasheet(answer_sheet_df)
-        answer_sheet_df = add_checked_to_datasheet(key_df, answer_sheet_df)
-        
-        score = evaluation(answer_sheet_df)
+                answer_sheet_df = detect_answers(file_path)
+                answer_sheet_df = add_answers_to_datasheet(answer_sheet_df)
+                answer_sheet_df = detect_questions_in_datasheet(answer_sheet_df)
+                answer_sheet_df = add_checked_to_datasheet(key_df, answer_sheet_df)
+                
+                score = evaluation(answer_sheet_df)
 
+                new_row = {'file_name': os.path.basename(file_path), 'score': score}
+                new_df = pd.DataFrame(new_row, index=[0])
 
+                df_all = pd.concat([new_df, df_all]).reset_index(drop=True)
 
+        df_all.to_csv(output_file, index=False)
         pass
