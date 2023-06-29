@@ -2,7 +2,8 @@ import csv
 import cv2
 import numpy as np
 import pandas as pd
-from functions import detect_answers, find_the_answer_datasheet, find_the_question, evaluation, presentation
+from functions import generate_key, detect_answers, find_the_answer_datasheet, find_the_question, evaluation, presentation
+from functions import add_answers_to_datasheet, detect_questions_in_datasheet, presentation, add_checked_to_datasheet
 
 class ClassScore:
     def __init__(self, answer_sheet_path, answer_key_path):
@@ -11,31 +12,59 @@ class ClassScore:
     
     def score(self):
         # Calculate the score and return a float value between 0 and 100
-        # Implementation logic goes here
-        pass
+        key_df = generate_key(self.answer_key_path)
+
+        answer_sheet_df = detect_answers(self.answer_sheet_path)
+        answer_sheet_df = add_answers_to_datasheet(answer_sheet_df)
+        answer_sheet_df = detect_questions_in_datasheet(answer_sheet_df)
+        answer_sheet_df = add_checked_to_datasheet(key_df, answer_sheet_df)
+        
+        score = evaluation(answer_sheet_df)
+        return score 
+        
     
-    def representation(self, answer_status):
+    def representation(self):
         # Visual representation of correct and incorrect answers based on input
-        # Implementation logic goes here
+        key_df = generate_key(self.answer_key_path)
+
+        answer_sheet_df = detect_answers(self.answer_sheet_path)
+        answer_sheet_df = add_answers_to_datasheet(answer_sheet_df)
+        answer_sheet_df = detect_questions_in_datasheet(answer_sheet_df)
+        answer_sheet_df = add_checked_to_datasheet(key_df, answer_sheet_df)
+        presentation(answer_sheet_df, self.answer_sheet_path)
+        
         pass
     
     def save_status(self, output_file):
-        with open(output_file, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['Question', 'Status'])
-            # Save the status of answer sheet in a CSV file
-            # Implementation logic goes here
+        key_df = generate_key(self.answer_key_path)
+
+        answer_sheet_df = detect_answers(self.answer_sheet_path)
+        answer_sheet_df = add_answers_to_datasheet(answer_sheet_df)
+        answer_sheet_df = detect_questions_in_datasheet(answer_sheet_df)
+        answer_sheet_df = add_checked_to_datasheet(key_df, answer_sheet_df)
+
+        answer_sheet_df = answer_sheet_df.drop(['x', 'y', 'x2', 'y2'], axis=1)
+        answer_sheet_df = answer_sheet_df.sort_values('question')
+
+        df = pd.DataFrame()
+        df['question'] = range(1,166)
+        df['checked'] = "-"
+
+        merged_df = df.merge(answer_sheet_df, on='question', how='left')
+        df['checked'] = merged_df['checked_y']
+        df['checked'] = df['checked'].fillna('-')
+
+        df.to_csv(output_file, index=False)
+
     
     @staticmethod
-    def save_all_status(answer_sheets, answer_keys, output_file):
-        with open(output_file, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['Image Name', 'Question 1', 'Question 2', ...])  # Add column headers dynamically
-            # Save the status of all answer sheets in a CSV file
-            # Implementation logic goes here
+    def save_allstatus(answer_sheets, answer_keys, output_file):
+        # Save the status of all answer sheets in a CSV file
+        
+        pass 
     
     @staticmethod
     def save_all(answer_sheets_folder, answer_keys_folder, output_file):
         # Read all answer sheets and keys, calculate scores, and save them in a CSV file
-        # Implementation logic goes here
+        
         pass

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import csv
 
-#  ---------------- Generate the Key ----------------------
+#  ---------------- 1. Generate the Key ----------------------
 # Define a custom function to compute the value of the new column
 def find_the_answer(row):
     if 1 <= row['col'] <= 3:
@@ -17,7 +17,7 @@ def find_the_answer(row):
     else:
         return row['col']
 
-def generate_key(path_to_key, path_to_key_csv): 
+def generate_key(path_to_key): 
     # Load the image
     image = cv2.imread(path_to_key)
 
@@ -69,19 +69,22 @@ def generate_key(path_to_key, path_to_key_csv):
             
 
     # Create a DataFrame from the correct_answers list
-    df = pd.DataFrame(correct_answers)
-    df.index = df.index + 1
+    key_df = pd.DataFrame(correct_answers)
+    key_df.index = key_df.index + 1
 
-    df['correct'] = df.apply(find_the_answer, axis=1)
+    key_df['correct'] = key_df.apply(find_the_answer, axis=1)
 
     # Save the DataFrame to a CSV file
-    df.to_csv(path_to_key_csv, index=True, index_label='question')
+    # df.to_csv(path_to_key_csv, index=True, index_label='question')
+    key_df['question'] = key_df.index 
 
     # Print a message to indicate that the data has been saved
-    print('The Key has been saved to the "key.csv" file.')
+    # print('The Key has been saved to the "key.csv" file.')
+    return key_df 
 
 
-
+#  ---------------- 2. Answer Sheet ----------------------
+#  ---------------- 2.1 Detect Asnwers ----------------------
 
 def detect_answers(path): 
 
@@ -125,21 +128,27 @@ def detect_answers(path):
 
 
     # Save the locations to a CSV file
-    csv_file = 'C:/Users/Hassan/Desktop/Projects/ResponseLetter/answers_sheet.csv'
-    with open(csv_file, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['x', 'y', 'x2', 'y2'])  # Write the header
-        for (x, y, x2, y2) in reversed(filtered_contours):
-            writer.writerow([x, y, x2, y2])
+    # csv_file = 'C:/Users/Hassan/Desktop/Projects/ResponseLetter/answers_sheet.csv'
+    # with open(csv_file, 'w', newline='') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerow(['x', 'y', 'x2', 'y2'])  # Write the header
+    #     for (x, y, x2, y2) in reversed(filtered_contours):
+    #         writer.writerow([x, y, x2, y2])
+
+    data = [(x, y, x2, y2) for (x, y, x2, y2) in reversed(filtered_contours)]
+
+    # Create a DataFrame from the data
+    answer_sheet_df = pd.DataFrame(data, columns=['x', 'y', 'x2', 'y2'])
 
     # Display the image with rectangles
-    cv2.imshow('Answer Sheet', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow('Answer Sheet', image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
-    return csv_file
+    return answer_sheet_df
 
-########### Detect Answers In DataSheet  ###############
+#  ---------------- 2.2 Detect Answers In DataSheet ----------------------
+
 def find_the_answer_datasheet(number):
     if 32 <= number <= 36:
         return 1
@@ -177,7 +186,16 @@ def find_the_answer_datasheet(number):
     else:
         return number
 
-########### Detect Questions In DataSheet  ###############
+
+def add_answers_to_datasheet(datasheet_df): 
+    
+    datasheet_df['answer'] = 0     
+    for item in range(len(datasheet_df)): 
+        datasheet_df['answer'][item] = find_the_answer_datasheet(datasheet_df['x2'][item]) 
+
+    return datasheet_df
+
+#  ---------------- 2.3 Detect Questions In DataSheet ----------------------
 
 def find_the_row(y): 
     if 0 <= y <= 170:
@@ -206,9 +224,17 @@ def find_the_question(x , y):
     elif 301 <= x <= 400:
         return find_the_row(y)+150 
     
+def detect_questions_in_datasheet(datasheet_df): 
 
-#------------- Evaluation ------------------
-def evaluation(key_df, df):
+    datasheet_df['question'] = 0
+    for item in range(len(datasheet_df)): 
+        datasheet_df['question'][item] = find_the_question(datasheet_df['x2'][item], datasheet_df['y2'][item]) 
+        
+    return datasheet_df
+
+#  ------ 2.4 Add Checked In DataSheet ----------- 
+
+def add_checked_to_datasheet(key_df, df):
     # Sort the key dataframe based on questions and answers
     key_df = key_df.sort_values(by=['question', 'correct']).reset_index(drop=True)
 
@@ -230,6 +256,12 @@ def evaluation(key_df, df):
             # The answer is wrong
             df.at[index, 'checked'] = False
 
+    return df
+
+#------------- 3. Evaluation ------------------
+
+def evaluation(df):
+    
     # Count the number of right and wrong questions
     num_right = df[df['checked'] == True].shape[0]
     num_wrong = df[df['checked'] == False].shape[0]
@@ -238,21 +270,21 @@ def evaluation(key_df, df):
     score = (num_right / (num_right + num_wrong)) * 100
 
     # Print the results
-    print("Number of Right Questions:", num_right)
-    print("Number of Wrong Questions:", num_wrong)
-    print("Score:", score)
+    # print("Number of Right Questions:", num_right)
+    # print("Number of Wrong Questions:", num_wrong)
+    # print("Score:", score)
 
-    df.to_csv('C:/Users/Hassan/Desktop/Projects/ResponseLetter/answers_sheet.csv' )
+    return score 
 
 
-    ## ------------ Presentation --------------------
+#------------- 4. Presentation ------------------
 
-def presentation(df, path):
+def presentation(df, path_to_answer_sheet):
     height = 800
     width = 600
 
     # Load your image here
-    image = cv2.imread(path)
+    image = cv2.imread(path_to_answer_sheet)
     image = image[600:-200, 80:-80]
     image = cv2.resize(image, (width, height))
 
