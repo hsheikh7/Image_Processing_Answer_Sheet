@@ -267,7 +267,7 @@ def evaluation(df):
     num_wrong = df[df['checked'] == False].shape[0]
 
     # Calculate the score
-    score = (num_right / (num_right + num_wrong)) * 100
+    score = (num_right / (165)) * 100
 
     # Print the results
     # print("Number of Right Questions:", num_right)
